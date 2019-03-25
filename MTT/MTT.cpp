@@ -6,6 +6,7 @@
 #include <string>
 
 #include "Foo.h"
+#include "Bar.h"
 
 template<typename Number>
 auto sum(const Number& num)
@@ -45,10 +46,15 @@ int main()
 	Output("Hello World", 42);
 	Output("Xelous says hello", std::string("Santa Says goodbye"));
 
-	Foo f;
-	f.Output(10, 11, 12, 13, 14);
-	f.Output("John", "Paul", "George", "Ringo");
-	f.Output("Temperature", 100, std::string("hot"));
+	Xelous::Foo::Get()->Output("Fishy");
+	Xelous::Foo::Get()->Output(1, 2, 3, 4);
+
+	//auto f = Xelous::Foo::Create();
+	//f->Output(10, 11, 12, 13, 14);
+	//f->Output("John", "Paul", "George", "Ringo");
+	//f->Output("Temperature", 100, std::string("hot"));
+
+	bar();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

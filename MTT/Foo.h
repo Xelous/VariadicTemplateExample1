@@ -3,56 +3,97 @@
 #include <string>
 #include <fstream>
 #include <mutex>
+#include <memory>
+#include <utility>
 
-class Foo
+namespace Xelous
 {
-private:
-	std::ofstream *mFile;
-	mutable std::mutex mLock;
-public:
-	Foo()
-		:
-		mFile(nullptr)
+	class Foo;
+	using FooPtr = std::unique_ptr<Foo>;
+	class Foo
 	{
-		mFile = new std::ofstream("c:\\code\\blog.txt", std::ios_base::trunc | std::ios_base::out);
-	}
+	private:
+		std::ofstream* mFile;
+		mutable std::mutex mLock;
 
-	~Foo()
-	{
-		if (Available())
+		Foo(const std::string& pFilename)
+			:
+			mFile(nullptr)
+		{
+			mFile = new std::ofstream(pFilename.c_str(), std::ios_base::trunc | std::ios_base::out);
+		}		
+
+		static FooPtr sMasterInstance;
+
+	public:
+
+		static auto Create(const std::string& pFilename = "c:\\code\\blog.txt")
+		{
+			return FooPtr(
+				new Foo(
+					std::forward<const std::string&>(
+						pFilename)));
+		}
+
+		static auto Get()
+		{
+			if (!sMasterInstance)
+			{
+				sMasterInstance = Create();
+			}
+			return sMasterInstance.get();
+		}
+
+		Foo() = delete;
+		Foo(const Foo&) = delete;
+		Foo(const Foo&&) = delete;
+		void operator=(const Foo&) = delete;
+		void operator=(const Foo&&) = delete;
+
+		~Foo()
+		{
+			if (Available())
+			{
+				std::scoped_lock lock(mLock);
+				mFile->close();
+				delete mFile;
+				mFile = nullptr;
+			}
+		}
+
+		const bool Available() const
 		{
 			std::scoped_lock lock(mLock);
-			mFile->close();
-			delete mFile;
-			mFile = nullptr;
+			return (mFile != nullptr) &&
+				mFile->is_open() &&
+				!mFile->bad();
 		}
-	}
 
-	const bool Available() const
-	{
-		std::scoped_lock lock(mLock);
-		return (mFile != nullptr) && mFile->is_open();
-	}
-
-	template<typename OutputItem>
-	void Output(const OutputItem& output)
-	{
-		if (Available())
+		template<typename OutputItem>
+		void Output(const OutputItem & output)
 		{
-			std::scoped_lock lock(mLock);
-			*mFile << output << "\r\n";
+			if (Available())
+			{
+				std::scoped_lock lock(mLock);
+				*mFile << output << "\r\n";
+			}
 		}
-	}
 
-	template<typename OutputItem, typename ...Others>
-	void Output(const OutputItem& output, Others... others)
-	{
-		if (Available())
+		template<typename OutputItem, typename ...Others>
+		void Output(const OutputItem & output, Others... others)
 		{
-			std::scoped_lock lock(mLock);
-			*mFile << output << "\r\n";
+			if (Available())
+			{
+				std::scoped_lock lock(mLock);
+				*mFile << output << "\r\n";
+			}
+			Output(others...);
 		}
-		Output(others...);
-	}
 
-};
+	};
+
+	FooPtr Foo::sMasterInstance{ nullptr };
+	
+
+
+}
